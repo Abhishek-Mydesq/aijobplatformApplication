@@ -1,6 +1,8 @@
 package com.aijobplatform.job.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
+import com.aijobplatform.job.entity.BaseEntity;
 
 @Entity
 @Table(name = "jobs")
@@ -21,4 +23,6 @@ public class Job extends BaseEntity {
     private Double salary;
     private String jobType;
     private String experienceLevel;
+    @Column(columnDefinition = "TEXT")
+    private String requiredSkills;
 }

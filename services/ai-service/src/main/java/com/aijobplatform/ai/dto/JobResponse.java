@@ -1,11 +1,8 @@
-package com.aijobplatform.job.dto;
-import lombok.*;
-import java.time.LocalDateTime;
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@Builder
+package com.aijobplatform.ai.dto;
+
+import lombok.Data;
+
+@Data
 public class JobResponse {
     private Long id;
     private String title;
@@ -16,6 +13,4 @@ public class JobResponse {
     private String jobType;
     private String requiredSkills;
     private String experienceLevel;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }
