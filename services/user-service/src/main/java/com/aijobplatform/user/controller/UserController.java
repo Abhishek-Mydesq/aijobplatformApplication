@@ -21,4 +21,14 @@ public class UserController {
                 .data("User profile data")
                 .build();
     }
+
+    @GetMapping("/{id}")
+    public ApiResponse<UserResponse> getUserById(@PathVariable Long id) {
+        UserResponse response = userService.getUserById(id);
+        return ApiResponse.<UserResponse>builder()
+                .success(true)
+                .message("User fetched")
+                .data(response)
+                .build();
+    }
 }

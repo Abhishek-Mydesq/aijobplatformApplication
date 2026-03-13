@@ -5,6 +5,7 @@ import com.aijobplatform.user.dto.UserResponse;
 import com.aijobplatform.user.entity.Role;
 import com.aijobplatform.user.entity.User;
 import com.aijobplatform.user.exception.ResourceAlreadyExistsException;
+import com.aijobplatform.user.exception.ResourceNotFoundException;
 import com.aijobplatform.user.repository.UserRepository;
 import com.aijobplatform.user.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -29,5 +30,13 @@ public class UserServiceImpl implements UserService {
         user.setRole(Role.USER);
         User savedUser = userRepository.save(user);
         return modelMapper.map(savedUser, UserResponse.class);
+    }
+    @Override
+    public UserResponse getUserById(Long id) {
+
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return modelMapper.map(user, UserResponse.class);
     }
 }

@@ -13,4 +13,5 @@ public class CreateJobRequest {
     private Double salary;
     private String jobType;
     private String experienceLevel;
+    private String requiredSkills;
 }

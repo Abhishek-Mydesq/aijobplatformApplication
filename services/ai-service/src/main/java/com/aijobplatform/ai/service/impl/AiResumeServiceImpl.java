@@ -1,9 +1,10 @@
 package com.aijobplatform.ai.service.impl;
-
+import com.aijobplatform.ai.client.ResumeServiceClient;
 import com.aijobplatform.ai.common.ResumeParserUtil;
 import com.aijobplatform.ai.common.ResumeScoreUtil;
 import com.aijobplatform.ai.common.SkillExtractorUtil;
 import com.aijobplatform.ai.dto.AiResumeResponse;
+import com.aijobplatform.ai.dto.ResumeResponse;
 import com.aijobplatform.ai.entity.ResumeAnalysis;
 import com.aijobplatform.ai.exception.ResourceNotFoundException;
 import com.aijobplatform.ai.repository.ResumeAnalysisRepository;
@@ -13,7 +14,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Arrays;
+import java.io.File;
 import java.util.List;
 
 @Service
@@ -21,8 +22,10 @@ import java.util.List;
 public class AiResumeServiceImpl implements AiResumeService {
 
     private final ResumeAnalysisRepository resumeAnalysisRepository;
+    private final ResumeServiceClient resumeServiceClient;
     private final ModelMapper modelMapper;
 
+    // OLD METHOD (keep)
     @Override
     public AiResumeResponse parseResume(MultipartFile file) {
 
@@ -30,20 +33,12 @@ public class AiResumeServiceImpl implements AiResumeService {
             throw new ResourceNotFoundException("Resume file not provided");
         }
 
-        // 1️⃣ Extract text from resume
         String resumeText = ResumeParserUtil.extractText(file);
 
-        if (resumeText == null || resumeText.isEmpty()) {
-            throw new ResourceNotFoundException("Unable to extract text from resume");
-        }
-
-        // 2️⃣ Extract skills
         List<String> skills = SkillExtractorUtil.extractSkills(resumeText);
 
-        // 3️⃣ Calculate resume score
         int score = ResumeScoreUtil.calculateScore(skills);
 
-        // 4️⃣ Save analysis
         ResumeAnalysis entity = new ResumeAnalysis();
 
         entity.setSkills(String.join(",", skills));
@@ -51,7 +46,57 @@ public class AiResumeServiceImpl implements AiResumeService {
 
         ResumeAnalysis saved = resumeAnalysisRepository.save(entity);
 
-        // 5️⃣ Convert to DTO
+        AiResumeResponse response = new AiResumeResponse();
+
+        response.setAnalysisId(saved.getId());
+        response.setSkills(skills);
+        response.setResumeScore(score);
+        response.setMessage("Resume analyzed successfully");
+
+        return response;
+    }
+
+
+    // ✅ NEW PRODUCTION METHOD
+    @Override
+    public AiResumeResponse analyzeResume(Long resumeId) {
+
+        // 1️⃣ call resume-service
+        ResumeResponse resume =
+                resumeServiceClient.getResumeById(resumeId).getData();
+
+        if (resume == null) {
+            throw new ResourceNotFoundException("Resume not found");
+        }
+
+        String filePath = resume.getFilePath();
+
+        File file = new File(filePath);
+
+        if (!file.exists()) {
+            throw new ResourceNotFoundException("Resume file not found on disk");
+        }
+
+        // 2️⃣ extract text
+        String resumeText = ResumeParserUtil.extractText(file);
+
+        // 3️⃣ extract skills
+        List<String> skills = SkillExtractorUtil.extractSkills(resumeText);
+
+        // 4️⃣ score
+        int score = ResumeScoreUtil.calculateScore(skills);
+
+        // 5️⃣ save analysis
+        ResumeAnalysis entity = new ResumeAnalysis();
+
+        entity.setResumeId(resume.getId());
+        entity.setUserId(resume.getUserId());
+        entity.setSkills(String.join(",", skills));
+        entity.setResumeScore(score);
+
+        ResumeAnalysis saved = resumeAnalysisRepository.save(entity);
+
+        // 6️⃣ response
         AiResumeResponse response = new AiResumeResponse();
 
         response.setAnalysisId(saved.getId());
