@@ -26,3 +26,8 @@ eureka:
     ip-address: 127.0.0.1
     hostname: localhost
     lease-renewal-interval-in-seconds: 5
+
+openai:
+  api:
+    key: ${OPENAI_API_KEY}
+    url: https://api.openai.com/v1/chat/completions

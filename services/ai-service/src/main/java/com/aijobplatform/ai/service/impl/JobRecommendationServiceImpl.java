@@ -8,6 +8,7 @@ import com.aijobplatform.ai.entity.ResumeAnalysis;
 import com.aijobplatform.ai.exception.ResourceNotFoundException;
 import com.aijobplatform.ai.repository.ResumeAnalysisRepository;
 import com.aijobplatform.ai.service.JobRecommendationService;
+import com.aijobplatform.ai.service.OpenAIService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,8 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
 
     private final ResumeAnalysisRepository repository;
     private final JobServiceClient jobServiceClient;
+    private final OpenAIService openAIService;
+
 
     @Override
     public List<JobRecommendationResponse> recommendJobs(Long analysisId) {
@@ -55,6 +58,7 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                     .map(String::toLowerCase)
                     .toList();
 
+
             // ---------- skill match ----------
             long matched = jobSkills.stream()
                     .filter(resumeSkills::contains)
@@ -63,8 +67,10 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
             int skillScore =
                     (int) ((matched * 100.0) / jobSkills.size());
 
+
             // ---------- resume score weight ----------
             int resumeScoreWeight = resumeScore / 5;
+
 
             // ---------- keyword bonus ----------
             int keywordBonus = 0;
@@ -81,15 +87,22 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                 }
             }
 
+
+            // ---------- AI SCORE ----------
+            int aiScore = askAIScore(analysis, job);
+
+
             // ---------- final score ----------
             int finalScore =
                     (int) (
-                            (skillScore * 0.6)
+                            (skillScore * 0.4)
                                     + (resumeScoreWeight * 0.2)
-                                    + keywordBonus
+                                    + (keywordBonus)
+                                    + (aiScore * 0.4)
                     );
 
             if (finalScore > 100) finalScore = 100;
+
 
             if (finalScore > 0) {
 
@@ -112,4 +125,43 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                 )
                 .collect(Collectors.toList());
     }
+
+
+    // ================= AI SCORE =================
+
+    private int askAIScore(
+            ResumeAnalysis analysis,
+            JobResponse job
+    ) {
+
+        try {
+
+            String prompt =
+                    "Rate job match 0-100.\n" +
+                            "Resume skills: " + analysis.getSkills() + "\n" +
+                            "Experience: " + analysis.getExperienceYears() + "\n" +
+                            "Summary: " + analysis.getSummary() + "\n" +
+                            "Job title: " + job.getTitle() + "\n" +
+                            "Required skills: " + job.getRequiredSkills() + "\n" +
+                            "Return only number";
+
+
+            String res =
+                    openAIService.askAI(prompt);
+
+            if (res == null) return 0;
+
+            String num =
+                    res.replaceAll("[^0-9]", "");
+
+            if (num.isEmpty()) return 0;
+
+            return Integer.parseInt(num);
+
+        } catch (Exception e) {
+
+            return 0;
+        }
+    }
+
 }

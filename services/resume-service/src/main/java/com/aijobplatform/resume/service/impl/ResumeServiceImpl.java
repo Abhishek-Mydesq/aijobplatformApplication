@@ -4,6 +4,7 @@ import com.aijobplatform.resume.client.UserServiceClient;
 import com.aijobplatform.resume.common.ApiResponse;
 import com.aijobplatform.resume.dto.PageResponse;
 import com.aijobplatform.resume.dto.UserResponse;
+import com.aijobplatform.resume.service.async.ResumeAsyncService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -33,7 +34,7 @@ public class ResumeServiceImpl implements ResumeService {
     private final ModelMapper modelMapper;
     private final AiServiceClient aiServiceClient;
     private final UserServiceClient userServiceClient;
-
+    private final ResumeAsyncService resumeAsyncService;
     private final String uploadDir = "uploads/resumes/";
 
     @Override
@@ -88,7 +89,7 @@ public class ResumeServiceImpl implements ResumeService {
             Resume savedResume = resumeRepository.save(resume);
 
             try {
-                analyzeResumeAsync(savedResume.getId());
+                resumeAsyncService.analyzeResume(savedResume.getId());
             } catch (Exception e) {
                 System.out.println("AI call failed: " + e.getMessage());
             }
