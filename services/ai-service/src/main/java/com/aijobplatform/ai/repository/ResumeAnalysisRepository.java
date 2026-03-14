@@ -1,5 +1,11 @@
 package com.aijobplatform.ai.repository;
 import com.aijobplatform.ai.entity.ResumeAnalysis;
 import org.springframework.data.jpa.repository.JpaRepository;
-public interface ResumeAnalysisRepository extends JpaRepository<ResumeAnalysis, Long> {
+import java.util.Optional;
+
+public interface ResumeAnalysisRepository
+        extends JpaRepository<ResumeAnalysis, Long> {
+
+    Optional<ResumeAnalysis> findByResumeId(Long resumeId);
+
 }

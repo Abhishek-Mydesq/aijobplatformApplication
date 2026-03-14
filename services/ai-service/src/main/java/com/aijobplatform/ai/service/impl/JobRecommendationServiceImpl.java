@@ -25,47 +25,91 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
     public List<JobRecommendationResponse> recommendJobs(Long analysisId) {
 
         ResumeAnalysis analysis = repository.findById(analysisId)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume analysis not found"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Resume analysis not found"));
 
-        List<String> resumeSkills = Arrays.stream(analysis.getSkills().split(","))
+        List<String> resumeSkills = Arrays.stream(
+                        analysis.getSkills().split(","))
                 .map(String::trim)
                 .map(String::toLowerCase)
                 .toList();
 
-        APIResponse<List<JobResponse>> response = jobServiceClient.getAllJobs();
+        int resumeScore = analysis.getResumeScore();
+
+        APIResponse<List<JobResponse>> response =
+                jobServiceClient.getAllJobs();
 
         List<JobResponse> jobs = response.getData();
 
-        List<JobRecommendationResponse> recommendations = new ArrayList<>();
+        List<JobRecommendationResponse> recommendations =
+                new ArrayList<>();
+
 
         for (JobResponse job : jobs) {
 
             if (job.getRequiredSkills() == null) continue;
 
-            List<String> jobSkills = Arrays.stream(job.getRequiredSkills().split(","))
+            List<String> jobSkills = Arrays.stream(
+                            job.getRequiredSkills().split(","))
                     .map(String::trim)
                     .map(String::toLowerCase)
                     .toList();
 
+            // ---------- skill match ----------
             long matched = jobSkills.stream()
                     .filter(resumeSkills::contains)
                     .count();
 
-            int matchScore = (int) ((matched * 100) / jobSkills.size());
+            int skillScore =
+                    (int) ((matched * 100.0) / jobSkills.size());
 
-            if (matchScore > 0) {
+            // ---------- resume score weight ----------
+            int resumeScoreWeight = resumeScore / 5;
+
+            // ---------- keyword bonus ----------
+            int keywordBonus = 0;
+
+            for (String skill : resumeSkills) {
+
+                if (skill.contains("java")
+                        || skill.contains("spring")
+                        || skill.contains("microservices")
+                        || skill.contains("docker")
+                        || skill.contains("aws")) {
+
+                    keywordBonus += 2;
+                }
+            }
+
+            // ---------- final score ----------
+            int finalScore =
+                    (int) (
+                            (skillScore * 0.6)
+                                    + (resumeScoreWeight * 0.2)
+                                    + keywordBonus
+                    );
+
+            if (finalScore > 100) finalScore = 100;
+
+            if (finalScore > 0) {
+
                 recommendations.add(
                         new JobRecommendationResponse(
                                 job.getId(),
                                 job.getTitle(),
-                                matchScore
+                                finalScore
                         )
                 );
             }
         }
 
+
         return recommendations.stream()
-                .sorted(Comparator.comparingInt(JobRecommendationResponse::getMatchScore).reversed())
+                .sorted(
+                        Comparator.comparingInt(
+                                JobRecommendationResponse::getMatchScore
+                        ).reversed()
+                )
                 .collect(Collectors.toList());
     }
 }

@@ -37,7 +37,7 @@ public class AiResumeServiceImpl implements AiResumeService {
 
         List<String> skills = SkillExtractorUtil.extractSkills(resumeText);
 
-        int score = ResumeScoreUtil.calculateScore(skills);
+        int score = ResumeScoreUtil.calculateScore(skills, resumeText);
 
         ResumeAnalysis entity = new ResumeAnalysis();
 
@@ -60,6 +60,26 @@ public class AiResumeServiceImpl implements AiResumeService {
     // ✅ NEW PRODUCTION METHOD
     @Override
     public AiResumeResponse analyzeResume(Long resumeId) {
+
+        // ✅ 0 check if already analyzed
+        ResumeAnalysis existing =
+                resumeAnalysisRepository.findByResumeId(resumeId)
+                        .orElse(null);
+
+        if (existing != null) {
+
+            AiResumeResponse response = new AiResumeResponse();
+
+            response.setAnalysisId(existing.getId());
+            response.setSkills(
+                    List.of(existing.getSkills().split(","))
+            );
+            response.setResumeScore(existing.getResumeScore());
+            response.setMessage("Resume already analyzed");
+
+            return response;
+        }
+
 
         // 1️⃣ call resume-service
         ResumeResponse resume =
@@ -84,7 +104,7 @@ public class AiResumeServiceImpl implements AiResumeService {
         List<String> skills = SkillExtractorUtil.extractSkills(resumeText);
 
         // 4️⃣ score
-        int score = ResumeScoreUtil.calculateScore(skills);
+        int score = ResumeScoreUtil.calculateScore(skills, resumeText);
 
         // 5️⃣ save analysis
         ResumeAnalysis entity = new ResumeAnalysis();
