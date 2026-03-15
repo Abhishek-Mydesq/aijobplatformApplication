@@ -9,6 +9,7 @@ import com.aijobplatform.ai.exception.ResourceNotFoundException;
 import com.aijobplatform.ai.repository.ResumeAnalysisRepository;
 import com.aijobplatform.ai.service.JobRecommendationService;
 import com.aijobplatform.ai.service.OpenAIService;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,18 +32,40 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Resume analysis not found"));
 
-        List<String> resumeSkills = Arrays.stream(
-                        analysis.getSkills().split(","))
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .toList();
+        // ✅ status check
+        if (!"DONE".equals(analysis.getStatus())) {
+            throw new RuntimeException("Analysis not completed yet");
+        }
 
-        int resumeScore = analysis.getResumeScore();
+        // ✅ safe skills
+        List<String> resumeSkills =
+                analysis.getSkills() == null
+                        ? List.of()
+                        : Arrays.stream(
+                                analysis.getSkills().split(","))
+                        .map(String::trim)
+                        .map(String::toLowerCase)
+                        .toList();
+
+        int resumeScore =
+                analysis.getResumeScore() == null
+                        ? 0
+                        : analysis.getResumeScore();
+
 
         APIResponse<List<JobResponse>> response =
                 jobServiceClient.getAllJobs();
 
         List<JobResponse> jobs = response.getData();
+
+        if (jobs == null) {
+            return List.of();
+        }
+
+        // ✅ limit jobs to avoid slow AI calls
+        jobs = jobs.stream()
+                .limit(20)
+                .toList();
 
         List<JobRecommendationResponse> recommendations =
                 new ArrayList<>();
@@ -50,13 +73,17 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
 
         for (JobResponse job : jobs) {
 
-            if (job.getRequiredSkills() == null) continue;
+            if (job.getRequiredSkills() == null
+                    || job.getRequiredSkills().isBlank()) {
+                continue;
+            }
 
-            List<String> jobSkills = Arrays.stream(
-                            job.getRequiredSkills().split(","))
-                    .map(String::trim)
-                    .map(String::toLowerCase)
-                    .toList();
+            List<String> jobSkills =
+                    Arrays.stream(
+                                    job.getRequiredSkills().split(","))
+                            .map(String::trim)
+                            .map(String::toLowerCase)
+                            .toList();
 
 
             // ---------- skill match ----------
@@ -65,10 +92,12 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                     .count();
 
             int skillScore =
-                    (int) ((matched * 100.0) / jobSkills.size());
+                    jobSkills.isEmpty()
+                            ? 0
+                            : (int) ((matched * 100.0) / jobSkills.size());
 
 
-            // ---------- resume score weight ----------
+            // ---------- resume score ----------
             int resumeScoreWeight = resumeScore / 5;
 
 
@@ -88,20 +117,24 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
             }
 
 
-            // ---------- AI SCORE ----------
-            int aiScore = askAIScore(analysis, job);
+            // ---------- AI score ----------
+            int aiScore =
+                    askAIScore(analysis, job);
 
 
-            // ---------- final score ----------
+            // ---------- final ----------
             int finalScore =
                     (int) (
                             (skillScore * 0.4)
                                     + (resumeScoreWeight * 0.2)
-                                    + (keywordBonus)
+                                    + keywordBonus
                                     + (aiScore * 0.4)
                     );
 
-            if (finalScore > 100) finalScore = 100;
+            // ✅ safe range
+            finalScore =
+                    Math.max(0,
+                            Math.min(100, finalScore));
 
 
             if (finalScore > 0) {
@@ -145,7 +178,6 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
                             "Required skills: " + job.getRequiredSkills() + "\n" +
                             "Return only number";
 
-
             String res =
                     openAIService.askAI(prompt);
 
@@ -156,12 +188,15 @@ public class JobRecommendationServiceImpl implements JobRecommendationService {
 
             if (num.isEmpty()) return 0;
 
-            return Integer.parseInt(num);
+            try {
+                return Integer.parseInt(num);
+            } catch (Exception e) {
+                return 0;
+            }
 
         } catch (Exception e) {
 
             return 0;
         }
     }
-
 }
