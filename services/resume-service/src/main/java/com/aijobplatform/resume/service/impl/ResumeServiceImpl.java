@@ -1,23 +1,25 @@
 package com.aijobplatform.resume.service.impl;
+
 import com.aijobplatform.resume.client.AiServiceClient;
 import com.aijobplatform.resume.client.UserServiceClient;
 import com.aijobplatform.resume.common.ApiResponse;
 import com.aijobplatform.resume.dto.PageResponse;
-import com.aijobplatform.resume.dto.UserResponse;
-import com.aijobplatform.resume.service.async.ResumeAsyncService;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import com.aijobplatform.resume.dto.ResumeResponse;
+import com.aijobplatform.resume.dto.UserResponse;
+import com.aijobplatform.resume.entity.AnalysisStatus;
 import com.aijobplatform.resume.entity.Resume;
+import com.aijobplatform.resume.entity.ResumeStatus;
 import com.aijobplatform.resume.exception.ResourceNotFoundException;
 import com.aijobplatform.resume.repository.ResumeRepository;
 import com.aijobplatform.resume.service.ResumeService;
+import com.aijobplatform.resume.service.async.ResumeAsyncService;
+
 import lombok.RequiredArgsConstructor;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -35,7 +37,11 @@ public class ResumeServiceImpl implements ResumeService {
     private final AiServiceClient aiServiceClient;
     private final UserServiceClient userServiceClient;
     private final ResumeAsyncService resumeAsyncService;
-    private final String uploadDir = "uploads/resumes/";
+
+    private final String uploadDir =
+            System.getProperty("user.dir") + "/uploads/resumes/";
+
+    // ================= UPLOAD =================
 
     @Override
     public ResumeResponse uploadResume(Long userId, MultipartFile file) {
@@ -47,7 +53,7 @@ public class ResumeServiceImpl implements ResumeService {
                 !userResponse.isSuccess() ||
                 userResponse.getData() == null) {
 
-            throw new RuntimeException("User not found with id: " + userId);
+            throw new RuntimeException("User not found");
         }
 
         String contentType = file.getContentType();
@@ -55,63 +61,82 @@ public class ResumeServiceImpl implements ResumeService {
         if (contentType == null ||
                 (!contentType.equals("application/pdf") &&
                         !contentType.equals("application/msword") &&
-                        !contentType.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
+                        !contentType.equals(
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))) {
 
-            throw new RuntimeException("Invalid file type. Only PDF, DOC, DOCX allowed.");
+            throw new RuntimeException("Invalid file type");
         }
 
         long maxSize = 5 * 1024 * 1024;
+
         if (file.getSize() > maxSize) {
-            throw new RuntimeException("File size exceeds 5MB limit");
+            throw new RuntimeException("File too large");
         }
 
         try {
 
-            Path uploadPath = Paths.get(uploadDir);
+            Path uploadPath =
+                    Paths.get(uploadDir).toAbsolutePath().normalize();
 
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
+            String fileName =
+                    System.currentTimeMillis() + "_" + file.getOriginalFilename();
 
             Path filePath = uploadPath.resolve(fileName);
 
-            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(
+                    file.getInputStream(),
+                    filePath,
+                    StandardCopyOption.REPLACE_EXISTING
+            );
+
+            long count = resumeRepository.countByUserId(userId);
 
             Resume resume = Resume.builder()
                     .userId(userId)
                     .fileName(fileName)
                     .fileType(contentType)
                     .filePath(filePath.toString())
+                    .fileSize(file.getSize())
+                    .version((int) count + 1)
+                    .isDefault(count == 0)
+                    .status(ResumeStatus.UPLOADED)
+                    .analysisStatus(AnalysisStatus.PENDING)
                     .build();
 
-            Resume savedResume = resumeRepository.save(resume);
+            Resume saved = resumeRepository.save(resume);
 
-            try {
-                resumeAsyncService.analyzeResume(savedResume.getId());
-            } catch (Exception e) {
-                System.out.println("AI call failed: " + e.getMessage());
-            }
+            resumeAsyncService.analyzeResume(saved.getId());
 
-            return modelMapper.map(savedResume, ResumeResponse.class);
+            return modelMapper.map(saved, ResumeResponse.class);
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to upload resume", e);
+            throw new RuntimeException("Upload failed", e);
         }
     }
 
+    // ================= GET BY USER =================
+
     @Override
-    public PageResponse<ResumeResponse> getResumesByUser(Long userId, int page, int size) {
+    public PageResponse<ResumeResponse> getResumesByUser(
+            Long userId,
+            int page,
+            int size
+    ) {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<Resume> resumePage = resumeRepository.findByUserId(userId, pageable);
+        Page<Resume> resumePage =
+                resumeRepository.findByUserId(userId, pageable);
 
-        List<ResumeResponse> responses = resumePage.getContent()
-                .stream()
-                .map(resume -> modelMapper.map(resume, ResumeResponse.class))
-                .toList();
+        List<ResumeResponse> responses =
+                resumePage.getContent()
+                        .stream()
+                        .map(r -> modelMapper.map(r, ResumeResponse.class))
+                        .toList();
 
         return new PageResponse<>(
                 responses,
@@ -123,52 +148,138 @@ public class ResumeServiceImpl implements ResumeService {
         );
     }
 
+    // ================= GET BY ID =================
+
     @Override
     public ResumeResponse getResumeById(Long id) {
 
-        Resume resume = resumeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
+        Resume resume =
+                resumeRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
 
         return modelMapper.map(resume, ResumeResponse.class);
     }
-    @Async
-    public void analyzeResumeAsync(Long resumeId) {
-        try {
-            aiServiceClient.analyzeResume(resumeId);
-        } catch (Exception e) {
-            System.out.println("AI async failed: " + e.getMessage());
-        }
-    }
+
+    // ================= DELETE =================
 
     @Override
     public void deleteResume(Long id) {
 
-        Resume resume = resumeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
+        Resume resume =
+                resumeRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
 
         resumeRepository.delete(resume);
     }
 
+    // ================= DOWNLOAD =================
+
     @Override
     public Resource downloadResume(Long id) {
 
-        Resume resume = resumeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Resume not found"));
+        Resume resume =
+                resumeRepository.findById(id)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
 
         try {
 
-            Path path = Paths.get(resume.getFilePath());
+            Path path =
+                    Paths.get(resume.getFilePath()).normalize();
 
-            Resource resource = new UrlResource(path.toUri());
+            Resource resource =
+                    new UrlResource(path.toUri());
 
-            if (resource.exists() && resource.isReadable()) {
-                return resource;
-            } else {
+            if (!resource.exists() || !resource.isReadable()) {
                 throw new RuntimeException("File not found or not readable");
             }
 
+            return resource;
+
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Error while reading file", e);
+            throw new RuntimeException("Error reading file", e);
         }
+    }
+
+    // ================= COUNT =================
+
+    @Override
+    public long countByUser(Long userId) {
+        return resumeRepository.countByUserId(userId);
+    }
+
+    // ================= DEFAULT =================
+
+    @Override
+    public ResumeResponse getDefaultResume(Long userId) {
+
+        Resume resume =
+                resumeRepository
+                        .findByUserIdAndIsDefaultTrue(userId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Default resume not found"));
+
+        return modelMapper.map(resume, ResumeResponse.class);
+    }
+
+    @Override
+    public void setDefaultResume(Long resumeId) {
+
+        Resume resume =
+                resumeRepository.findById(resumeId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
+
+        List<Resume> all =
+                resumeRepository
+                        .findByUserId(resume.getUserId(), Pageable.unpaged())
+                        .getContent();
+
+        for (Resume r : all) {
+            r.setIsDefault(false);
+        }
+
+        resume.setIsDefault(true);
+
+        resumeRepository.saveAll(all);
+    }
+
+    // ================= STATUS =================
+
+    @Override
+    public String getResumeStatus(Long resumeId) {
+
+        Resume resume =
+                resumeRepository.findById(resumeId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
+
+        return resume.getAnalysisStatus().name();
+    }
+
+    // ================= REANALYZE =================
+
+    @Override
+    public void reanalyzeResume(Long resumeId) {
+
+        Resume resume =
+                resumeRepository.findById(resumeId)
+                        .orElseThrow(() ->
+                                new ResourceNotFoundException("Resume not found"));
+
+        resume.setAnalysisStatus(AnalysisStatus.PENDING);
+
+        resumeRepository.save(resume);
+
+        resumeAsyncService.analyzeResume(resumeId);
+    }
+
+    // ================= EXISTS =================
+
+    @Override
+    public boolean exists(Long resumeId) {
+        return resumeRepository.existsById(resumeId);
     }
 }

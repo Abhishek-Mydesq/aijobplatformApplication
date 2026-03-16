@@ -12,4 +12,10 @@ public interface ResumeService {
     ResumeResponse getResumeById(Long id);
     void deleteResume(Long id);
     Resource downloadResume(Long id);
+    long countByUser(Long userId);
+    ResumeResponse getDefaultResume(Long userId);
+    void setDefaultResume(Long resumeId);
+    String getResumeStatus(Long resumeId);
+    void reanalyzeResume(Long resumeId);
+    boolean exists(Long resumeId);
 }

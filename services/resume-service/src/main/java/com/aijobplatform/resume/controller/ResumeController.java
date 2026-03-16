@@ -78,4 +78,82 @@ public class ResumeController {
                 .header("Content-Disposition", "attachment; filename=\"" + resource.getFilename() + "\"")
                 .body(resource);
     }
+
+    @GetMapping("/user/{userId}/count")
+    public ResponseEntity<ApiResponse<Long>> count(
+            @PathVariable Long userId
+    ) {
+
+        long count = resumeService.countByUser(userId);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Count", count)
+        );
+    }
+
+    @GetMapping("/user/{userId}/default")
+    public ResponseEntity<ApiResponse<ResumeResponse>> getDefault(
+            @PathVariable Long userId
+    ) {
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Default resume",
+                        resumeService.getDefaultResume(userId)
+                )
+        );
+    }
+
+    @PutMapping("/{id}/default")
+    public ResponseEntity<ApiResponse<Void>> setDefault(
+            @PathVariable Long id
+    ) {
+
+        resumeService.setDefaultResume(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Default updated", null)
+        );
+    }
+
+    @GetMapping("/{id}/status")
+    public ResponseEntity<ApiResponse<String>> status(
+            @PathVariable Long id
+    ) {
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Status",
+                        resumeService.getResumeStatus(id)
+                )
+        );
+    }
+
+    @PostMapping("/{id}/reanalyze")
+    public ResponseEntity<ApiResponse<Void>> reanalyze(
+            @PathVariable Long id
+    ) {
+
+        resumeService.reanalyzeResume(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Reanalyze started", null)
+        );
+    }
+
+    @GetMapping("/exists/{id}")
+    public ResponseEntity<ApiResponse<Boolean>> exists(
+            @PathVariable Long id
+    ) {
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(
+                        true,
+                        "Exists",
+                        resumeService.exists(id)
+                )
+        );
+    }
 }
