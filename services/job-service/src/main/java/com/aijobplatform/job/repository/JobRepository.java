@@ -12,5 +12,14 @@ public interface JobRepository extends JpaRepository<Job, Long> {
             String location,
             Pageable pageable
     );
-
+    long count();
+    boolean existsById(Long id);
+    Page<Job> findByJobType(
+            String jobType,
+            Pageable pageable
+    );
+    Page<Job> findByExperienceLevel(
+            String experienceLevel,
+            Pageable pageable
+    );
 }

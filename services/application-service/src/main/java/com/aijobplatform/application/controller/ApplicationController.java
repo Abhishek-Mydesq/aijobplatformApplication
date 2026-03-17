@@ -1,10 +1,7 @@
 package com.aijobplatform.application.controller;
 
 import com.aijobplatform.application.common.ApiResponse;
-import com.aijobplatform.application.dto.ApplyJobRequest;
-import com.aijobplatform.application.dto.ApplicationResponse;
-import com.aijobplatform.application.dto.PageResponse;
-import com.aijobplatform.application.dto.UpdateApplicationStatusRequest;
+import com.aijobplatform.application.dto.*;
 import com.aijobplatform.application.service.ApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -70,4 +67,71 @@ public class ApplicationController {
                 new ApiResponse<>(true, "Application status updated", response)
         );
     }
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<ApplicationResponse>> getById(
+            @PathVariable Long id) {
+        ApplicationResponse response =
+                applicationService.getApplicationById(id);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Application fetched", response)
+        );
+    }
+    @GetMapping("/user/{userId}/count")
+    public ResponseEntity<ApiResponse<Long>> countByUser(
+            @PathVariable Long userId) {
+
+        long count =
+                applicationService.countByUser(userId);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Count fetched", count)
+        );
+    }
+    @GetMapping("/job/{jobId}/count")
+    public ResponseEntity<ApiResponse<Long>> countByJob(
+            @PathVariable Long jobId) {
+
+        long count =
+                applicationService.countByJob(jobId);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Count fetched", count)
+        );
+    }
+    @DeleteMapping("/{id}/withdraw")
+    public ResponseEntity<ApiResponse<String>> withdraw(
+            @PathVariable Long id) {
+
+        applicationService.withdrawApplication(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Application withdrawn", null)
+        );
+    }
+
+    @GetMapping("/user/{userId}/status/{status}")
+    public ResponseEntity<ApiResponse<List<ApplicationResponse>>> getByUserAndStatus(
+            @PathVariable Long userId,
+            @PathVariable ApplicationStatus status) {
+
+        List<ApplicationResponse> response =
+                applicationService.getByUserAndStatus(userId, status);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Fetched", response)
+        );
+    }
+    @GetMapping("/job/{jobId}/status/{status}")
+    public ResponseEntity<ApiResponse<List<ApplicationResponse>>> getByJobAndStatus(
+            @PathVariable Long jobId,
+            @PathVariable ApplicationStatus status) {
+
+        List<ApplicationResponse> response =
+                applicationService.getByJobAndStatus(jobId, status);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Fetched", response)
+        );
+    }
+
 }

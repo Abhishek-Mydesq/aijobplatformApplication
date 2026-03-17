@@ -13,4 +13,17 @@ public interface JobService {
     JobResponse updateJob(Long id, CreateJobRequest request);
     void deleteJob(Long id);
     PageResponse<JobResponse> searchJobs(String title, String location, int page, int size);
+    long countJobs();
+    boolean exists(Long id);
+    PageResponse<JobResponse> getAllJobsPage(int page, int size);
+    PageResponse<JobResponse> getByJobType(
+            String jobType,
+            int page,
+            int size
+    );
+    PageResponse<JobResponse> getByExperienceLevel(
+            String level,
+            int page,
+            int size
+    );
 }

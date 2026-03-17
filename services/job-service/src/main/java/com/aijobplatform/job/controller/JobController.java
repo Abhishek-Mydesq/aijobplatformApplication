@@ -34,7 +34,7 @@ public class JobController {
         );
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<ApiResponse<JobResponse>> getJobById(@PathVariable Long id) {
         JobResponse job = jobService.getJobById(id);
         return ResponseEntity.ok(
@@ -75,4 +75,78 @@ public class JobController {
                 new ApiResponse<>(true, "Jobs fetched successfully", response)
         );
     }
-}
+    @GetMapping("/count")
+    public ResponseEntity<ApiResponse<Long>> countJobs() {
+
+        long count = jobService.countJobs();
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Count fetched", count)
+        );
+    }
+
+    @GetMapping("/exists/{id}")
+    public ResponseEntity<ApiResponse<Boolean>> exists(
+            @PathVariable Long id
+    ) {
+
+        boolean exists = jobService.exists(id);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Exists check", exists)
+        );
+    }
+
+    @GetMapping("/page")
+    public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getAllJobsPage(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        PageResponse<JobResponse> response =
+                jobService.getAllJobsPage(page, size);
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Jobs fetched", response)
+        );
+    }
+
+    @GetMapping("/type/{jobType}")
+    public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getByJobType(
+            @PathVariable String jobType,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        PageResponse<JobResponse> response =
+                jobService.getByJobType(
+                        jobType,
+                        page,
+                        size
+                );
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Jobs fetched", response)
+        );
+    }
+
+    @GetMapping("/experience/{level}")
+    public ResponseEntity<ApiResponse<PageResponse<JobResponse>>> getByExperience(
+            @PathVariable String level,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        PageResponse<JobResponse> response =
+                jobService.getByExperienceLevel(
+                        level,
+                        page,
+                        size
+                );
+
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Jobs fetched", response)
+        );
+
+        }
+    }

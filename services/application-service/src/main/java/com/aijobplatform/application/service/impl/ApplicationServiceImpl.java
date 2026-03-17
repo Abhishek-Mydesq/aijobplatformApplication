@@ -43,9 +43,6 @@ public class ApplicationServiceImpl implements ApplicationService {
             throw new RuntimeException(
                     "User not found: " + request.getUserId());
         }
-
-
-        // ✅ JOB VALIDATION
         ApiResponse<JobResponse> jobResponse =
                 jobServiceClient.getJobById(request.getJobId());
 
@@ -57,8 +54,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                     "Job not found: " + request.getJobId());
         }
 
-
-        // ✅ RESUME VALIDATION
         ApiResponse<ResumeResponse> resumeResponse =
                 resumeServiceClient.getResumeById(request.getResumeId());
 
@@ -70,8 +65,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                     "Resume not found: " + request.getResumeId());
         }
 
-
-        // ✅ DUPLICATE CHECK
         if (applicationRepository.existsByUserIdAndJobId(
                 request.getUserId(),
                 request.getJobId())) {
@@ -80,8 +73,6 @@ public class ApplicationServiceImpl implements ApplicationService {
                     "User already applied to this job");
         }
 
-
-        // ✅ SAVE APPLICATION
         Application application = Application.builder()
                 .userId(request.getUserId())
                 .jobId(request.getJobId())
@@ -186,6 +177,82 @@ public class ApplicationServiceImpl implements ApplicationService {
                 updated,
                 ApplicationResponse.class
         );
+    }
+    @Override
+    public ApplicationResponse getApplicationById(Long id) {
+
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Application not found"
+                        ));
+
+        return modelMapper.map(app, ApplicationResponse.class);
+    }
+
+
+    @Override
+    public long countByUser(Long userId) {
+        return applicationRepository.countByUserId(userId);
+    }
+
+
+    @Override
+    public long countByJob(Long jobId) {
+        return applicationRepository.countByJobId(jobId);
+    }
+
+
+    @Override
+    public void withdrawApplication(Long id) {
+
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Application not found"
+                        ));
+
+        app.setStatus(ApplicationStatus.WITHDRAWN);
+
+        applicationRepository.save(app);
+    }
+
+
+    @Override
+    public List<ApplicationResponse> getByUserAndStatus(
+            Long userId,
+            ApplicationStatus status
+    ) {
+
+        return applicationRepository
+                .findByUserIdAndStatus(userId, status)
+                .stream()
+                .map(a ->
+                        modelMapper.map(
+                                a,
+                                ApplicationResponse.class
+                        )
+                )
+                .toList();
+    }
+
+
+    @Override
+    public List<ApplicationResponse> getByJobAndStatus(
+            Long jobId,
+            ApplicationStatus status
+    ) {
+
+        return applicationRepository
+                .findByJobIdAndStatus(jobId, status)
+                .stream()
+                .map(a ->
+                        modelMapper.map(
+                                a,
+                                ApplicationResponse.class
+                        )
+                )
+                .toList();
     }
 
 }

@@ -6,6 +6,7 @@ public enum ApplicationStatus {
     IN_REVIEW,
     SHORTLISTED,
     REJECTED,
-    HIRED
+    HIRED,
+    WITHDRAWN
 
 }
