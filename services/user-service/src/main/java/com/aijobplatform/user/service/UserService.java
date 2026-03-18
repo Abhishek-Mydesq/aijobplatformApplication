@@ -23,4 +23,5 @@ public interface UserService {
     void changePassword(Long id, String newPassword);
 
     boolean existsByEmail(String email);
+    boolean isTokenValid(String email, String token);
 }

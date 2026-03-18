@@ -138,5 +138,12 @@ public class UserController {
                 .data(exists)
                 .build();
     }
+    @GetMapping("/token/validate")
+    public Boolean validateToken(
+            @RequestParam String email,
+            @RequestParam String token
+    ) {
+        return userService.isTokenValid(email, token);
+    }
 
 }

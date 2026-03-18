@@ -4,8 +4,18 @@ spring:
 
   cloud:
     gateway:
+
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+
       default-filters:
         - PreserveHostHeader
+        - name: Retry
+          args:
+            retries: 2
+            statuses: BAD_GATEWAY
+            methods: GET,POST
 
       routes:
 
@@ -44,8 +54,10 @@ spring:
           filters:
             - StripPrefix=0
 
+
 server:
   port: 8080
+
 
 eureka:
   client:
@@ -58,3 +70,16 @@ eureka:
     ip-address: 127.0.0.1
     hostname: localhost
     lease-renewal-interval-in-seconds: 5
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    reactor.netty: INFO

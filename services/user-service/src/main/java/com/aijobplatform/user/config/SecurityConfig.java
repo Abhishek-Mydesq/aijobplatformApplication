@@ -13,29 +13,51 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
+
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final JwtAuthenticationEntryPoint jwtAuthEntryPoint;
+
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(
+            HttpSecurity http
+    ) throws Exception {
+
         http
                 .csrf(csrf -> csrf.disable())
+
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(jwtAuthEntryPoint)
                 )
+
                 .authorizeHttpRequests(auth -> auth
+
+                        // ✅ public APIs
                         .requestMatchers(
                                 "/api/auth/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/users/*"   // ✅ allow internal call
+
+                                // VERY IMPORTANT
+                                "/api/users/token/validate",
+
+                                // allow internal calls if needed
+                                "/api/users/exists/**",
+                                "/api/users/id/**"
                         ).permitAll()
+
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                .addFilterBefore(
+                        jwtAuthFilter,
+                        UsernamePasswordAuthenticationFilter.class
+                );
+
         return http.build();
     }
 }

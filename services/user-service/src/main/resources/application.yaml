@@ -1,5 +1,27 @@
 server:
   port: 8081
+
+spring:
+  application:
+    name: user-service
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/user_db
+    username: root
+    password: abes290@
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+
+  mvc:
+    async:
+      request-timeout: 5000
+
+
 eureka:
   client:
     service-url:
@@ -8,21 +30,17 @@ eureka:
   instance:
     instance-id: ${spring.application.name}:${server.port}
     prefer-ip-address: true
-    ip-address: 127.0.0.1
-    hostname: localhost
-    lease-renewal-interval-in-seconds: 5
-
-spring:
-  application:
-    name: user-service
-  datasource:
-    url: jdbc:mysql://localhost:3306/user_db
-    username: root
-    password: abes290@
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
 
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+
+
+logging:
+  level:
+    root: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN
