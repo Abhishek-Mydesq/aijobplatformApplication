@@ -1,0 +1,30 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.aijobplatform</groupId>
+    <artifactId>ai-job-platform</artifactId>
+    <version>1.0.0</version>
+
+    <packaging>pom</packaging>
+
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+    </properties>
+
+    <modules>
+
+        <module>infrastructure/eureka-server</module>
+        <module>infrastructure/kafka-config</module>
+
+        <module>services/user-service</module>
+        <module>services/job-service</module>
+        <module>services/resume-service</module>
+        <module>services/application-service</module>
+        <module>services/ai-service</module>
+
+    </modules>
+
+</project>

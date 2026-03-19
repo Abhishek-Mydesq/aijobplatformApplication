@@ -3,6 +3,18 @@ server:
 spring:
   application:
     name: resume-service
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+    consumer:
+      group-id: resume-group
+      auto-offset-reset: earliest
+
   datasource:
     url: jdbc:mysql://localhost:3306/resume_db
     username: root

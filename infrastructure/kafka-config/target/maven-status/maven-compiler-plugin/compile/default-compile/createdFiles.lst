@@ -1,0 +1,4 @@
+com\aijobplatform\kafka\config\KafkaConsumerConfig.class
+com\aijobplatform\kafka\config\KafkaProducerConfig.class
+com\aijobplatform\kafka\dto\ResumeUploadedEvent.class
+com\aijobplatform\kafka\config\KafkaTopics.class

@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: ai-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: ai-group
+      auto-offset-reset: earliest
 
   datasource:
     url: jdbc:mysql://localhost:3306/ai_db

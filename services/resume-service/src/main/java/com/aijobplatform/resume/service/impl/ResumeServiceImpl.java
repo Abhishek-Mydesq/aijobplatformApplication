@@ -1,5 +1,6 @@
 package com.aijobplatform.resume.service.impl;
 
+import com.aijobplatform.kafka.dto.ResumeUploadedEvent;
 import com.aijobplatform.resume.client.AiServiceClient;
 import com.aijobplatform.resume.client.UserServiceClient;
 import com.aijobplatform.resume.common.ApiResponse;
@@ -13,9 +14,9 @@ import com.aijobplatform.resume.exception.ResourceNotFoundException;
 import com.aijobplatform.resume.repository.ResumeRepository;
 import com.aijobplatform.resume.service.ResumeService;
 import com.aijobplatform.resume.service.async.ResumeAsyncService;
+import com.aijobplatform.resume.service.kafka.ResumeEventProducer;
 
 import lombok.RequiredArgsConstructor;
-
 import org.modelmapper.ModelMapper;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -37,9 +38,11 @@ public class ResumeServiceImpl implements ResumeService {
     private final AiServiceClient aiServiceClient;
     private final UserServiceClient userServiceClient;
     private final ResumeAsyncService resumeAsyncService;
+    private final ResumeEventProducer eventProducer;
 
     private final String uploadDir =
             System.getProperty("user.dir") + "/uploads/resumes/";
+
 
     // ================= UPLOAD =================
 
@@ -109,7 +112,14 @@ public class ResumeServiceImpl implements ResumeService {
 
             Resume saved = resumeRepository.save(resume);
 
-            resumeAsyncService.analyzeResume(saved.getId());
+            // ✅ Kafka event (use saved)
+
+            ResumeUploadedEvent event = new ResumeUploadedEvent();
+            event.setResumeId(saved.getId());
+            event.setUserId(saved.getUserId());
+            event.setFilePath(saved.getFilePath());
+
+            eventProducer.sendResumeUploaded(event);
 
             return modelMapper.map(saved, ResumeResponse.class);
 
@@ -117,6 +127,7 @@ public class ResumeServiceImpl implements ResumeService {
             throw new RuntimeException("Upload failed", e);
         }
     }
+
 
     // ================= GET BY USER =================
 
@@ -148,6 +159,7 @@ public class ResumeServiceImpl implements ResumeService {
         );
     }
 
+
     // ================= GET BY ID =================
 
     @Override
@@ -161,6 +173,7 @@ public class ResumeServiceImpl implements ResumeService {
         return modelMapper.map(resume, ResumeResponse.class);
     }
 
+
     // ================= DELETE =================
 
     @Override
@@ -173,6 +186,7 @@ public class ResumeServiceImpl implements ResumeService {
 
         resumeRepository.delete(resume);
     }
+
 
     // ================= DOWNLOAD =================
 
@@ -193,15 +207,16 @@ public class ResumeServiceImpl implements ResumeService {
                     new UrlResource(path.toUri());
 
             if (!resource.exists() || !resource.isReadable()) {
-                throw new RuntimeException("File not found or not readable");
+                throw new RuntimeException("File not found");
             }
 
             return resource;
 
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Error reading file", e);
+            throw new RuntimeException(e);
         }
     }
+
 
     // ================= COUNT =================
 
@@ -209,6 +224,7 @@ public class ResumeServiceImpl implements ResumeService {
     public long countByUser(Long userId) {
         return resumeRepository.countByUserId(userId);
     }
+
 
     // ================= DEFAULT =================
 
@@ -223,6 +239,7 @@ public class ResumeServiceImpl implements ResumeService {
 
         return modelMapper.map(resume, ResumeResponse.class);
     }
+
 
     @Override
     public void setDefaultResume(Long resumeId) {
@@ -246,6 +263,7 @@ public class ResumeServiceImpl implements ResumeService {
         resumeRepository.saveAll(all);
     }
 
+
     // ================= STATUS =================
 
     @Override
@@ -258,6 +276,7 @@ public class ResumeServiceImpl implements ResumeService {
 
         return resume.getAnalysisStatus().name();
     }
+
 
     // ================= REANALYZE =================
 
@@ -275,6 +294,7 @@ public class ResumeServiceImpl implements ResumeService {
 
         resumeAsyncService.analyzeResume(resumeId);
     }
+
 
     // ================= EXISTS =================
 
