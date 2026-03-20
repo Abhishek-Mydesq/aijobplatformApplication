@@ -16,10 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +25,22 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository repository;
     private final UserClient userClient;
+
+
+    // ✅ REQUIRED FOR KAFKA / SCHEDULER / INTERNAL
+    @Override
+    public Notification save(Notification notification) {
+
+        log.info(
+                "Saving notification user={} type={} source={}",
+                notification.getUserId(),
+                notification.getType(),
+                notification.getSourceService()
+        );
+
+        return repository.save(notification);
+    }
+
 
     @Override
     public NotificationResponse save(
@@ -64,6 +77,9 @@ public class NotificationServiceImpl implements NotificationService {
                         .title(title)
                         .message(message)
                         .type(notificationType)
+                        .priority(null)
+                        .sourceService("API")
+                        .metadata(null)
                         .status(NotificationStatus.CREATED)
                         .isRead(false)
                         .build();
@@ -74,6 +90,7 @@ public class NotificationServiceImpl implements NotificationService {
         return NotificationMapper.toResponse(saved);
     }
 
+
     @Override
     public List<NotificationResponse> saveBulk(
             List<NotificationEvent> events
@@ -83,15 +100,10 @@ public class NotificationServiceImpl implements NotificationService {
 
         for (NotificationEvent e : events) {
 
-            NotificationType type;
-
-            try {
-                type = NotificationType.valueOf(
-                        e.getType()
-                );
-            } catch (Exception ex) {
-                type = NotificationType.SYSTEM;
-            }
+            NotificationType type =
+                    e.getType() != null
+                            ? e.getType()
+                            : NotificationType.SYSTEM;
 
             list.add(
                     Notification.builder()
@@ -99,6 +111,9 @@ public class NotificationServiceImpl implements NotificationService {
                             .title(e.getTitle())
                             .message(e.getMessage())
                             .type(type)
+                            .priority(e.getPriority())
+                            .sourceService(e.getSourceService())
+                            .metadata(e.getMetadata())
                             .status(NotificationStatus.CREATED)
                             .isRead(false)
                             .build()
@@ -111,6 +126,7 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(NotificationMapper::toResponse)
                 .toList();
     }
+
 
     @Override
     public PageResponse<NotificationResponse> getByUser(
@@ -139,6 +155,7 @@ public class NotificationServiceImpl implements NotificationService {
         );
     }
 
+
     @Override
     public PageResponse<NotificationResponse> getUnread(
             Long userId,
@@ -166,6 +183,7 @@ public class NotificationServiceImpl implements NotificationService {
         );
     }
 
+
     @Override
     public PageResponse<NotificationResponse> getAll(
             int page,
@@ -189,16 +207,19 @@ public class NotificationServiceImpl implements NotificationService {
         );
     }
 
+
     @Override
     public long count(Long userId) {
         return repository.countByUserId(userId);
     }
+
 
     @Override
     public long unread(Long userId) {
         return repository
                 .countByUserIdAndIsReadFalse(userId);
     }
+
 
     @Override
     public void markRead(Long id) {
@@ -216,6 +237,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         repository.save(n);
     }
+
 
     @Override
     public Map<String, Long> stats() {
