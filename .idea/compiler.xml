@@ -10,6 +10,7 @@
         <module name="api-gateway" />
         <module name="eureka-server" />
         <module name="kafka-config" />
+        <module name="search-service" />
       </profile>
       <profile name="Annotation profile for ai-job-platform" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -47,6 +48,7 @@
       <module name="notification-service" options="-parameters" />
       <module name="resume-service" options="-parameters" />
       <module name="scheduler-service" options="-parameters" />
+      <module name="search-service" options="-parameters" />
       <module name="user-service" options="-parameters" />
     </option>
   </component>

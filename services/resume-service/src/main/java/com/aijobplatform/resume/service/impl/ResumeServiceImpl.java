@@ -16,6 +16,7 @@ import com.aijobplatform.resume.service.ResumeService;
 import com.aijobplatform.resume.service.async.ResumeAsyncService;
 import com.aijobplatform.resume.service.kafka.ResumeEventProducer;
 
+import com.aijobplatform.resume.service.kafka.dto.SearchEvent;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.core.io.Resource;
@@ -39,6 +40,7 @@ public class ResumeServiceImpl implements ResumeService {
     private final UserServiceClient userServiceClient;
     private final ResumeAsyncService resumeAsyncService;
     private final ResumeEventProducer eventProducer;
+
 
     private final String uploadDir =
             System.getProperty("user.dir") + "/uploads/resumes/";
@@ -120,6 +122,16 @@ public class ResumeServiceImpl implements ResumeService {
             event.setFilePath(saved.getFilePath());
 
             eventProducer.sendResumeUploaded(event);
+            SearchEvent searchEvent =
+                    SearchEvent.builder()
+                            .refId(saved.getId())
+                            .refType("RESUME")
+                            .title(saved.getFileName())
+                            .content(saved.getFileType())
+                            .tags(saved.getStatus().name())
+                            .build();
+
+            eventProducer.sendSearchEvent(searchEvent);
 
             return modelMapper.map(saved, ResumeResponse.class);
 

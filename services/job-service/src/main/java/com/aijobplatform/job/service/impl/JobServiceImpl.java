@@ -5,6 +5,8 @@ import com.aijobplatform.job.dto.JobResponse;
 import com.aijobplatform.job.dto.PageResponse;
 import com.aijobplatform.job.entity.Job;
 import com.aijobplatform.job.exception.ResourceNotFoundException;
+import com.aijobplatform.job.kafka.dto.SearchEvent;
+import com.aijobplatform.job.kafka.producer.SearchProducer;
 import com.aijobplatform.job.repository.JobRepository;
 import com.aijobplatform.job.service.JobService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +24,7 @@ public class JobServiceImpl implements JobService {
 
     private final JobRepository jobRepository;
     private final ModelMapper modelMapper;
-
+    private final SearchProducer searchProducer;
 
     @Override
     public JobResponse createJob(CreateJobRequest request) {
@@ -30,6 +32,17 @@ public class JobServiceImpl implements JobService {
         Job job = modelMapper.map(request, Job.class);
 
         Job savedJob = jobRepository.save(job);
+
+        SearchEvent event =
+                SearchEvent.builder()
+                        .refId(savedJob.getId())
+                        .refType("JOB")
+                        .title(savedJob.getTitle())
+                        .content(savedJob.getDescription())
+                        .tags(savedJob.getJobType())
+                        .build();
+
+        searchProducer.send(event);
 
         return modelMapper.map(savedJob, JobResponse.class);
     }

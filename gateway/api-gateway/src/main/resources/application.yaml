@@ -61,6 +61,20 @@ spring:
           filters:
             - StripPrefix=0
 
+        - id: scheduler-service
+          uri: lb://scheduler-service
+          predicates:
+            - Path=/api/scheduler/**
+          filters:
+            - StripPrefix=0
+
+        - id: search-service
+          uri: lb://search-service
+          predicates:
+            - Path=/api/search/**
+          filters:
+            - StripPrefix=0
+
 
 server:
   port: 8080

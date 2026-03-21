@@ -11,6 +11,8 @@ import com.aijobplatform.ai.entity.ResumeAnalysis;
 import com.aijobplatform.ai.exception.ResourceNotFoundException;
 import com.aijobplatform.ai.repository.ResumeAnalysisRepository;
 import com.aijobplatform.ai.service.AiResumeService;
+import com.aijobplatform.ai.service.kafka.SearchProducer;
+import com.aijobplatform.ai.service.kafka.dto.SearchEvent;
 import com.aijobplatform.ai.service.llm.LLMService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -26,6 +28,7 @@ public class AiResumeServiceImpl implements AiResumeService {
     private final ResumeAnalysisRepository resumeAnalysisRepository;
     private final ResumeServiceClient resumeServiceClient;
     private final LLMService llmService;
+    private final SearchProducer searchProducer;
     // ================================
     // helper mapping
     // ================================
@@ -266,6 +269,16 @@ public class AiResumeServiceImpl implements AiResumeService {
 
             ResumeAnalysis saved =
                     resumeAnalysisRepository.save(entity);
+            SearchEvent event =
+                    SearchEvent.builder()
+                            .refId(saved.getId())
+                            .refType("AI")
+                            .title("AI Analysis")
+                            .content(saved.getSkills())
+                            .tags(saved.getStatus())
+                            .build();
+
+            searchProducer.send(event);
 
             return toResponse(saved);
 
