@@ -16,7 +16,8 @@ public class SearchConsumer {
 
     @KafkaListener(
             topics = "search-topic",
-            groupId = "search-group"
+            groupId = "search-group",
+            containerFactory = "searchKafkaListenerContainerFactory"
     )
     public void consume(SearchEvent event) {
 

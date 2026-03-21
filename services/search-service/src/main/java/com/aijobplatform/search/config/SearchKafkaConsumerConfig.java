@@ -1,6 +1,5 @@
 package com.aijobplatform.search.config;
 
-import com.aijobplatform.search.kafka.dto.SearchEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -13,10 +12,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Configuration
-public class KafkaConsumerConfig {
+public class SearchKafkaConsumerConfig {
 
-    @Bean
-    public ConsumerFactory<String, SearchEvent> consumerFactory() {
+    @Bean(name = "searchConsumerFactory")
+    public ConsumerFactory<String, Object> consumerFactory() {
 
         Map<String, Object> config = new HashMap<>();
 
@@ -46,24 +45,23 @@ public class KafkaConsumerConfig {
         );
 
         config.put(
-                JsonDeserializer.VALUE_DEFAULT_TYPE,
-                "com.aijobplatform.search.kafka.dto.SearchEvent"
+                JsonDeserializer.USE_TYPE_INFO_HEADERS,
+                false
         );
 
         config.put(
-                JsonDeserializer.USE_TYPE_INFO_HEADERS,
-                false
+                JsonDeserializer.VALUE_DEFAULT_TYPE,
+                "com.aijobplatform.search.kafka.dto.SearchEvent"
         );
 
         return new DefaultKafkaConsumerFactory<>(config);
     }
 
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, SearchEvent>
+    @Bean(name = "searchKafkaListenerContainerFactory")
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
     kafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<String, SearchEvent> factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
         factory.setConsumerFactory(
@@ -72,5 +70,4 @@ public class KafkaConsumerConfig {
 
         return factory;
     }
-
 }

@@ -25,15 +25,15 @@
         <module name="user-service" />
         <module name="ai-service" />
       </profile>
-      <profile name="Annotation profile for scheduler-service" enabled="true">
+      <profile name="Annotation profile for notification-service" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <processorPath useClasspath="false">
           <entry name="$MAVEN_REPOSITORY$/org/projectlombok/lombok/1.18.44/lombok-1.18.44.jar" />
         </processorPath>
-        <module name="scheduler-service" />
         <module name="notification-service" />
+        <module name="scheduler-service" />
       </profile>
     </annotationProcessing>
   </component>

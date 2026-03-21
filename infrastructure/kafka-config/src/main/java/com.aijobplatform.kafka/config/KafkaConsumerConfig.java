@@ -1,5 +1,4 @@
 package com.aijobplatform.kafka.config;
-import com.aijobplatform.kafka.dto.ResumeUploadedEvent;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -15,15 +14,8 @@ import java.util.Map;
 @Configuration
 @EnableKafka
 public class KafkaConsumerConfig {
-
     @Bean
-    public ConsumerFactory<String, ResumeUploadedEvent> consumerFactory() {
-
-        JsonDeserializer<ResumeUploadedEvent> deserializer =
-                new JsonDeserializer<>(ResumeUploadedEvent.class);
-
-        deserializer.addTrustedPackages("*");
-        deserializer.setUseTypeHeaders(false);
+    public ConsumerFactory<String, Object> consumerFactory() {
 
         Map<String, Object> config = new HashMap<>();
 
@@ -34,35 +26,43 @@ public class KafkaConsumerConfig {
 
         config.put(
                 ConsumerConfig.GROUP_ID_CONFIG,
-                "ai-group"
+                "default-group"
         );
 
         config.put(
-                ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,
-                "latest"
+                ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                StringDeserializer.class
         );
 
-        return new DefaultKafkaConsumerFactory<>(
-                config,
-                new StringDeserializer(),
-                deserializer
+        config.put(
+                ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                JsonDeserializer.class
         );
+
+        config.put(
+                JsonDeserializer.TRUSTED_PACKAGES,
+                "*"
+        );
+
+        config.put(
+                JsonDeserializer.VALUE_DEFAULT_TYPE,
+                "com.aijobplatform.kafka.dto.ResumeUploadedEvent"
+        );
+
+        return new DefaultKafkaConsumerFactory<>(config);
     }
 
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<
-            String,
-            ResumeUploadedEvent
-            > kafkaListenerContainerFactory() {
+    public ConcurrentKafkaListenerContainerFactory<String, Object>
+    kafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<
-                String,
-                ResumeUploadedEvent
-                > factory =
+        ConcurrentKafkaListenerContainerFactory<String, Object> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
 
-        factory.setConsumerFactory(consumerFactory());
+        factory.setConsumerFactory(
+                consumerFactory()
+        );
 
         return factory;
     }

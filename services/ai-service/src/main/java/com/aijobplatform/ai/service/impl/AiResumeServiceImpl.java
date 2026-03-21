@@ -278,7 +278,7 @@ public class AiResumeServiceImpl implements AiResumeService {
                             .tags(saved.getStatus())
                             .build();
 
-            searchProducer.send(event);
+            searchProducer.send(resumeId);
 
             return toResponse(saved);
 

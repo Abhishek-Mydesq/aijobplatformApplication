@@ -131,8 +131,6 @@ public class ResumeServiceImpl implements ResumeService {
                             .tags(saved.getStatus().name())
                             .build();
 
-            eventProducer.sendSearchEvent(searchEvent);
-
             return modelMapper.map(saved, ResumeResponse.class);
 
         } catch (IOException e) {

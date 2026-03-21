@@ -6,7 +6,9 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.kafka.annotation.EnableKafka;
 
-@SpringBootApplication
+@SpringBootApplication(
+		scanBasePackages = "com.aijobplatform"
+)
 @EnableDiscoveryClient
 @EnableFeignClients
 @EnableKafka
